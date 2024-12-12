@@ -70,6 +70,7 @@ dependencies {
         implementation(libs.androidx.ui.graphics)
         implementation(libs.androidx.ui.tooling.preview)
         implementation(libs.androidx.ui.test.junit4)
+        implementation (libs.material3)
 
         // Material Design (Compose Material 3)
         implementation(libs.androidx.material3)

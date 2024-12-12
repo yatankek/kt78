@@ -11,16 +11,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -41,13 +36,96 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                ImageDownloaderApp()
+                MainScaffold()
             }
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun ImageDownloaderApp() {
+    fun MainScaffold() {
+        var currentScreen by remember { mutableStateOf("Главная") }
+        val context = LocalContext.current
+
+        // Define Drawer State and Scope
+        val drawerState = rememberDrawerState(DrawerValue.Closed)
+        val coroutineScope = rememberCoroutineScope()
+
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    Column {
+                        Text("Заголовок меню", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
+
+                        // Drawer Item for Home Screen
+                        TextButton(onClick = {
+                            currentScreen = "Главная"
+                            coroutineScope.launch {
+                                drawerState.close()
+                            }
+                        }) {
+                            Text("Главная")
+                        }
+
+                        // Drawer Item for Settings Screen
+                        TextButton(onClick = {
+                            currentScreen = "Настройки"
+                            coroutineScope.launch {
+                                drawerState.close()
+                            }
+                        }) {
+                            Text("Настройки")
+                        }
+                    }
+                }
+            }
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(currentScreen) },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                coroutineScope.launch {
+                                    if (drawerState.isOpen) drawerState.close() else drawerState.open()
+                                }
+                            }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Меню")
+                            }
+                        }
+                    )
+                },
+                bottomBar = {
+                    BottomAppBar {
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Menu, contentDescription = null) },
+                            label = { Text("Главная") },
+                            selected = currentScreen == "Главная",
+                            onClick = { currentScreen = "Главная" }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                            label = { Text("Настройки") },
+                            selected = currentScreen == "Настройки",
+                            onClick = { currentScreen = "Настройки" }
+                        )
+                    }
+                },
+                content = { padding ->
+                    Box(modifier = Modifier.padding(padding)) {
+                        when (currentScreen) {
+                            "Главная" -> HomeScreen()
+                            "Настройки" -> SettingsScreen()
+                        }
+                    }
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun HomeScreen() {
         var imageUrl by remember { mutableStateOf(TextFieldValue()) }
         var bitmap by remember { mutableStateOf<Bitmap?>(null) }
         val context = LocalContext.current
@@ -137,6 +215,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    @Composable
+    fun SettingsScreen() {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Здесь будут настройки", style = MaterialTheme.typography.headlineSmall)
         }
     }
 

@@ -13,6 +13,7 @@ activityCompose = "1.9.3"
 composeBom = "2024.04.01"
 junitKtx = "1.2.1"
 appcompat = "1.7.0"
+material3 = "1.1.0"
 mockitoAndroid = "3"
 mockitoCore = "1"
 mockitoCoreVersion = "4"
@@ -41,6 +42,7 @@ androidx-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 mockito-android = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroid" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
 mockito-core-v4 = { module = "org.mockito:mockito-core", version.ref = "mockitoCoreVersion" }
