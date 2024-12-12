@@ -56,27 +56,42 @@ android {
 
 dependencies {
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.junit.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation (libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    testImplementation (libs.mockito.core.v5140)
-    testImplementation(libs.androidx.core)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation (libs.mockk)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    dependencies {
+
+        // Core Android libraries
+        implementation(libs.androidx.core.ktx)
+        implementation(libs.androidx.lifecycle.runtime.ktx)
+        implementation(libs.androidx.activity.compose)
+        implementation(libs.androidx.appcompat)
+
+        // Jetpack Compose
+        implementation(platform(libs.androidx.compose.bom))
+        implementation(libs.androidx.ui)
+        implementation(libs.androidx.ui.graphics)
+        implementation(libs.androidx.ui.tooling.preview)
+        implementation(libs.androidx.ui.test.junit4)
+
+        // Material Design (Compose Material 3)
+        implementation(libs.androidx.material3)
+
+        // Coroutines
+        implementation(libs.kotlinx.coroutines.core)
+
+        // Testing
+        testImplementation(libs.junit)
+        androidTestImplementation(libs.androidx.junit)
+        androidTestImplementation(libs.androidx.espresso.core)
+        androidTestImplementation(platform(libs.androidx.compose.bom))
+        androidTestImplementation(libs.androidx.ui.test.junit4)
+        testImplementation(libs.mockito.core.v5140)
+        testImplementation(libs.androidx.core)
+        testImplementation(libs.robolectric)
+        testImplementation(libs.kotlinx.coroutines.test)
+        testImplementation(libs.mockk)
+
+        // Debugging
+        debugImplementation(libs.androidx.ui.tooling)
+        debugImplementation(libs.androidx.ui.test.manifest)
+    }
+
 }

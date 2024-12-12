@@ -1,96 +1,174 @@
 package com.example.kt78
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.Environment
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 
-class MainActivity : AppCompatActivity() {
-
-    lateinit var editTextUrl:EditText
-    lateinit var buttonDownload:Button
-    lateinit var imageView:ImageView
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContent {
+            MaterialTheme {
+                ImageDownloaderApp()
+            }
+        }
+    }
 
-        var editTextUrl = findViewById<EditText>(R.id.editTextUrl)
-        var buttonDownload = findViewById<Button>(R.id.buttonDownload)
-        var imageView = findViewById<ImageView>(R.id.imageView)
+    @Composable
+    fun ImageDownloaderApp() {
+        var imageUrl by remember { mutableStateOf(TextFieldValue()) }
+        var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+        val context = LocalContext.current
 
-        buttonDownload.setOnClickListener {
-            val imageUrl = editTextUrl.text.toString()
-            lifecycleScope.launch {
-                val bitmap = downloadAndSaveImage(imageUrl)
-                if (bitmap != null) {
-                    imageView.setImageBitmap(bitmap)
-                    showToast("Изображение загружено и сохранено")
-                } else {
-                    showToast("Ошибка загрузки изображения")
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // URL Input
+            OutlinedTextField(
+                value = imageUrl,
+                onValueChange = { imageUrl = it },
+                label = { Text("Введите URL изображения") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(9.dp))
+
+            // Download Button
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Button(
+                    onClick = {
+                        lifecycleScope.launch {
+                            bitmap = downloadAndSaveImage(imageUrl.text, context)
+                            if (bitmap == null) {
+                                Toast.makeText(context, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Изображение загружено и сохранено", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Загрузить изображение")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Image Display
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap!!.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text(
+                            text = "Здесь будет отображено изображение",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dynamic List
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(10) { index ->
+                    Card(
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "Элемент списка $index",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
         }
     }
 
-    suspend fun downloadAndSaveImage(imageUrl: String): Bitmap? {
-        // Переводим выполнение в фоновый поток
+    private suspend fun downloadAndSaveImage(imageUrl: String, context: android.content.Context): Bitmap? {
         val bitmap = withContext(Dispatchers.IO) {
-            downloadImage(imageUrl) // Загружаем изображение
+            downloadImage(imageUrl)
         }
 
-
-        // Если изображение было успешно загружено, сохраняем его
         if (bitmap != null) {
             withContext(Dispatchers.IO) {
-                saveImageToDisk(bitmap)
+                saveImageToDisk(bitmap, context)
             }
         }
-
-        return bitmap // Возвращаем результат (bitmap или null)
+        return bitmap
     }
 
-    fun downloadImage(imageUrl: String): Bitmap? = runCatching {
+    private fun downloadImage(imageUrl: String): Bitmap? = runCatching {
         val connection = URL(imageUrl).openConnection()
         connection.doInput = true
         val input = connection.getInputStream()
         BitmapFactory.decodeStream(input)
     }.getOrNull()
 
-
-    fun saveImageToDisk(bitmap: Bitmap) {
-
+    private fun saveImageToDisk(bitmap: Bitmap, context: android.content.Context) {
         runCatching {
-            val file = File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "downloaded_image.jpg")
+            val file = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "downloaded_image.jpg")
             FileOutputStream(file).use { outputStream ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                // принудительная запись данных
                 outputStream.flush()
             }
-        }.onFailure { showToast("Ошибка сохранения изображения") }
-    }
-
-    fun showToast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }.onFailure {
+            Toast.makeText(context, "Ошибка сохранения изображения", Toast.LENGTH_SHORT).show()
+        }
     }
 }
