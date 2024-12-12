@@ -16,6 +16,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -23,6 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
+import androidx.navigation.compose.*
+import androidx.work.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,10 +50,11 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainScaffold() {
-        var currentScreen by remember { mutableStateOf("Главная") }
-        val context = LocalContext.current
+        val navController = rememberNavController()
+        val items = listOf("home", "settings")
+        var selectedItem by remember { mutableStateOf("home") }
 
-        // Define Drawer State and Scope
+        // DrawerState для управления открытием/закрытием Drawer
         val drawerState = rememberDrawerState(DrawerValue.Closed)
         val coroutineScope = rememberCoroutineScope()
 
@@ -60,7 +67,9 @@ class MainActivity : ComponentActivity() {
 
                         // Drawer Item for Home Screen
                         TextButton(onClick = {
-                            currentScreen = "Главная"
+                            navController.navigate("home")
+                            selectedItem = "home"
+                            // Закрыть Drawer
                             coroutineScope.launch {
                                 drawerState.close()
                             }
@@ -70,7 +79,9 @@ class MainActivity : ComponentActivity() {
 
                         // Drawer Item for Settings Screen
                         TextButton(onClick = {
-                            currentScreen = "Настройки"
+                            navController.navigate("settings")
+                            selectedItem = "settings"
+                            // Закрыть Drawer
                             coroutineScope.launch {
                                 drawerState.close()
                             }
@@ -84,11 +95,12 @@ class MainActivity : ComponentActivity() {
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text(currentScreen) },
+                        title = { Text("Приложение") },
                         navigationIcon = {
                             IconButton(onClick = {
+                                // Открыть Drawer при нажатии на иконку меню
                                 coroutineScope.launch {
-                                    if (drawerState.isOpen) drawerState.close() else drawerState.open()
+                                    drawerState.open()
                                 }
                             }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Меню")
@@ -97,26 +109,34 @@ class MainActivity : ComponentActivity() {
                     )
                 },
                 bottomBar = {
-                    BottomAppBar {
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Menu, contentDescription = null) },
-                            label = { Text("Главная") },
-                            selected = currentScreen == "Главная",
-                            onClick = { currentScreen = "Главная" }
-                        )
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                            label = { Text("Настройки") },
-                            selected = currentScreen == "Настройки",
-                            onClick = { currentScreen = "Настройки" }
-                        )
+                    NavigationBar {
+                        items.forEach { screen ->
+                            NavigationBarItem(
+                                icon = {
+                                    Icon(
+                                        if (screen == "home") Icons.Default.Menu else Icons.Default.Settings,
+                                        contentDescription = null
+                                    )
+                                },
+                                label = { Text(if (screen == "home") "Главная" else "Настройки") },
+                                selected = selectedItem == screen,
+                                onClick = {
+                                    navController.navigate(screen) {
+                                        // Use popUpTo to avoid stack overflow
+                                        popUpTo = navController.graph.startDestinationId
+                                        launchSingleTop = true
+                                    }
+                                    selectedItem = screen
+                                }
+                            )
+                        }
                     }
                 },
                 content = { padding ->
                     Box(modifier = Modifier.padding(padding)) {
-                        when (currentScreen) {
-                            "Главная" -> HomeScreen()
-                            "Настройки" -> SettingsScreen()
+                        NavHost(navController, startDestination = "home") {
+                            composable("home") { HomeScreen() }
+                            composable("settings") { SettingsScreen() }
                         }
                     }
                 }
@@ -149,14 +169,13 @@ class MainActivity : ComponentActivity() {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Button(
                     onClick = {
-                        lifecycleScope.launch {
-                            bitmap = downloadAndSaveImage(imageUrl.text, context)
-                            if (bitmap == null) {
-                                Toast.makeText(context, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Изображение загружено и сохранено", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        // Запускаем фоновую задачу через WorkManager для загрузки изображения
+                        val workRequest = OneTimeWorkRequestBuilder<ImageDownloadWorker>()
+                            .setInputData(workDataOf("image_url" to imageUrl.text))
+                            .build()
+                        WorkManager.getInstance(context).enqueue(workRequest)
+
+                        Toast.makeText(context, "Задача загрузки изображения запущена", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -228,35 +247,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun downloadAndSaveImage(imageUrl: String, context: android.content.Context): Bitmap? {
-        val bitmap = withContext(Dispatchers.IO) {
-            downloadImage(imageUrl)
-        }
+    // WorkManager задача для загрузки изображения
+    class ImageDownloadWorker(appContext: android.content.Context, workerParams: WorkerParameters) :
+        Worker(appContext, workerParams) {
 
-        if (bitmap != null) {
-            withContext(Dispatchers.IO) {
-                saveImageToDisk(bitmap, context)
+        override fun doWork(): Result {
+            val imageUrl = inputData.getString("image_url") ?: return Result.failure()
+
+            return try {
+                val bitmap = downloadImage(imageUrl)
+                saveImageToDisk(bitmap)
+                Result.success()
+            } catch (e: Exception) {
+                Result.failure()
             }
         }
-        return bitmap
-    }
 
-    private fun downloadImage(imageUrl: String): Bitmap? = runCatching {
-        val connection = URL(imageUrl).openConnection()
-        connection.doInput = true
-        val input = connection.getInputStream()
-        BitmapFactory.decodeStream(input)
-    }.getOrNull()
+        private fun downloadImage(imageUrl: String): Bitmap? = runCatching {
+            val connection = URL(imageUrl).openConnection()
+            connection.doInput = true
+            val input = connection.getInputStream()
+            BitmapFactory.decodeStream(input)
+        }.getOrNull()
 
-    private fun saveImageToDisk(bitmap: Bitmap, context: android.content.Context) {
-        runCatching {
-            val file = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "downloaded_image.jpg")
-            FileOutputStream(file).use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                outputStream.flush()
+        private fun saveImageToDisk(bitmap: Bitmap?) {
+            if (bitmap != null) {
+                val context = applicationContext
+                val file = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "downloaded_image.jpg")
+                FileOutputStream(file).use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    outputStream.flush()
+                }
             }
-        }.onFailure {
-            Toast.makeText(context, "Ошибка сохранения изображения", Toast.LENGTH_SHORT).show()
         }
     }
 }

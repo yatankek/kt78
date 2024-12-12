@@ -20,11 +20,15 @@ mockitoCoreVersion = "4"
 mockitoKotlin = "1"
 mockitoMockitoCore = "5.14.0"
 mockk = "1"
+navigationCompose = "2.6.0"
 robolectric = "4.14"
+workRuntimeKtx = "2.8.0"
 
 [libraries]
 androidx-core = { module = "androidx.test:core", version.ref = "core" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

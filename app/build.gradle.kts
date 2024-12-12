@@ -71,6 +71,8 @@ dependencies {
         implementation(libs.androidx.ui.tooling.preview)
         implementation(libs.androidx.ui.test.junit4)
         implementation (libs.material3)
+        implementation (libs.androidx.navigation.compose)
+        implementation (libs.androidx.work.runtime.ktx)
 
         // Material Design (Compose Material 3)
         implementation(libs.androidx.material3)
